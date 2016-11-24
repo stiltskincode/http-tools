@@ -58,7 +58,7 @@ func main(){
 					Usage: "number of requests",
 				},cli.BoolFlag{
 					Name: "postfix, p",
-					Usage: "number of requests",
+					Usage: "generete random endpoint postfix",
 				},
 			},
 			Action:func(c *cli.Context) error {
