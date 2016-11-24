@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 	"fmt"
-	"bitbucket.org/acaisoft/tools/cmd"
 	"github.com/Sirupsen/logrus"
+	"github.com/stiltskincode/http-tools/cmd"
 )
 
 var log = logrus.New()
@@ -21,9 +21,7 @@ func contains(s []string, e string) bool {
 }
 
 func main(){
-
-
-	availableMethods := []string{"GET", "HEAD"}
+	availableMethods := []string{"GET", "HEAD", "PUT"}
 	app := cli.NewApp()
 	app.Name = "web api test"
 	app.Version = "00.00.1"
@@ -58,6 +56,9 @@ func main(){
 					Name: "requests, r",
 					Value: 1,
 					Usage: "number of requests",
+				},cli.BoolFlag{
+					Name: "postfix, p",
+					Usage: "number of requests",
 				},
 			},
 			Action:func(c *cli.Context) error {
@@ -76,9 +77,10 @@ func main(){
 
 				threads := c.Int("threads")
 				requests := c.Int("requests")
+				postfix := c.Bool("postfix")
 				url := c.Args().Get(0)
 
-				cmd.HttpEndpointBenchmark(method, url, threads, requests)
+				cmd.HttpEndpointBenchmark(method, url, threads, requests, postfix)
 
 				return nil
 			},

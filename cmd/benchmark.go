@@ -5,12 +5,41 @@ import (
 	"net/http"
 	"github.com/Sirupsen/logrus"
 	"time"
+	"io"
+	"bytes"
+	"math/rand"
 )
 
+const (
+	postfixLength = 20
+	chunkSize = 1000
+)
 var (
  	wg sync.WaitGroup
 	LogChannel = make(chan BenchmarkLog)
 )
+
+//33 126
+
+func random(min, max int) int {
+	return rand.Intn(max - min) + min
+}
+
+func GetRandomBytes(size int64, begin, end int) []byte {
+	var data []byte
+
+	var i int64
+	for i =  0; i < size; i++ {
+		data = append(data, byte(random(begin, end)))
+	}
+
+	return data
+}
+
+func GetRandomPrintableBytes(size int64) []byte {
+	return GetRandomBytes(size, 33, 126)
+}
+
 
 type BenchmarkJob struct{
 	Url string
@@ -19,13 +48,24 @@ type BenchmarkJob struct{
 	Number int
 }
 
+func (b *BenchmarkJob) NewRequest()(*http.Request, error){
+	var body io.Reader = nil
+
+	if b.Method == "PUT"  || b.Method == "POST" {
+		body = bytes.NewReader(GetRandomBytes(chunkSize, 0, 126))
+	}
+
+	return http.NewRequest(b.Method, b.Url, body)
+}
+
+
 func (b *BenchmarkJob) Start(){
 	go func() {
 		var error error;
 		start := time.Now()
 
 		for i := 0; i < b.ReqestsNum; i++ {
-			if request, error := http.NewRequest(b.Method, b.Url, nil); error == nil {
+			if request, error := b.NewRequest(); error == nil {
 				if response, error := http.DefaultClient.Do(request); error == nil {
 					elapsed := time.Since(start)
 					blog := BenchmarkLog{
@@ -51,7 +91,10 @@ func (b *BenchmarkJob) Start(){
 	}()
 }
 
-func NewBenchmarkJob(url, method string, threadId,  reqNum int) BenchmarkJob{
+func NewBenchmarkJob(url, method string, threadId,  reqNum int, randomPostfix bool) BenchmarkJob{
+	if randomPostfix {
+		url += "/" +  string(GetRandomPrintableBytes(postfixLength)[:postfixLength])
+	}
 	return BenchmarkJob{
 		Url: url,
 		Method: method,
@@ -60,10 +103,10 @@ func NewBenchmarkJob(url, method string, threadId,  reqNum int) BenchmarkJob{
 	}
 }
 
-func HttpEndpointBenchmark(method, urlStr string, thrNum, reqNum int){
+func HttpEndpointBenchmark(method, urlStr string, thrNum, reqNum int, randomPostfix bool){
 	wg.Add(thrNum)
 	for i:=1; i <= thrNum; i++ {
-		b := NewBenchmarkJob( urlStr, method, i, reqNum)
+		b := NewBenchmarkJob(urlStr, method, i, reqNum, randomPostfix)
 		b.Start()
 	}
 
